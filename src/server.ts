@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import path from "path";
 import { setupMongoDB } from "./config/mongoSetup";
+import { InitOptions } from "payload/config";
 
 // Load environment variables
 dotenv.config({
@@ -51,14 +52,7 @@ const start = async () => {
 
   app.post("/api/webhooks/stripe", webhookMiddleware, stripeWebhookHandler);
 
-  const payload = await getPayloadClient({
-    initOptions: {
-      express: app,
-      onInit: async (cms) => {
-        cms.logger.info(`Admin URL: ${cms.getAdminURL()}`);
-      },
-    },
-  });
+  const payload = await getPayloadClient();
 
   if (process.env.NEXT_BUILD) {
     app.listen(PORT, async () => {

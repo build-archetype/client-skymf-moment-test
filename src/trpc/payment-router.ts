@@ -27,23 +27,26 @@ export const paymentRouter = router({
         },
       });
 
-      const filteredProducts = products.filter((prod) => Boolean(prod.priceId));
+      const filteredProducts = products.filter((prod: { priceId: string }) =>
+        Boolean(prod.priceId)
+      );
 
       const order = await payload.create({
         collection: "orders",
         data: {
           _isPaid: false,
-          products: filteredProducts.map((prod) => String(prod.id)),
+          products: filteredProducts.map((prod: { id: string | number }) =>
+            String(prod.id)
+          ),
           user: user.id,
         },
       });
 
       const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
-      filteredProducts.forEach((product) => {
+      filteredProducts.forEach((product: { priceId: string }) => {
         line_items.push({
-          price: product.priceId as string,
-          quantity: 1,
+          price: product.priceId,
         });
       });
 
