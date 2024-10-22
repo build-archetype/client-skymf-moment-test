@@ -8,6 +8,7 @@ import { PRODUCT_CATEGORIES } from "@/config";
 import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 import PaymentStatus from "@/components/PaymentStatus";
+import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
 interface PageProps {
   searchParams: {

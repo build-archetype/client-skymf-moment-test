@@ -1,7 +1,7 @@
 import { User } from "../payload-types";
-import { RequestCookies } from "next/dist/server/web/spec-extension/cookies";
+import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
-export const getServerSideUser = async (cookies: RequestCookies) => {
+export async function getServerSideUser(cookies: ReadonlyRequestCookies) {
   const token = cookies.get("payload-token")?.value;
 
   const meRes = await fetch(`/api/users/me`, {
@@ -13,4 +13,4 @@ export const getServerSideUser = async (cookies: RequestCookies) => {
   const { user } = await meRes.json();
 
   return { user };
-};
+}
