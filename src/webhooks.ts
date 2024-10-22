@@ -7,7 +7,28 @@ import { Product } from "./payload-types";
 import { Resend } from "resend";
 import { ReceiptEmailHtml } from "./components/emails/ReceiptEmail";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Mock email service that mimics Resend's structure
+const mockEmailService = {
+  emails: {
+    send: async ({ from, to, subject, html }: any) => {
+      console.log(`Mock email sent from ${from} to ${to[0]}`);
+      console.log(`Subject: ${subject}`);
+      console.log(`Content: ${html}`);
+      return { id: "mock-email-id" };
+    },
+  },
+};
+
+// Function to create email service
+const createEmailService = () => {
+  if (process.env.MOCK_EMAIL === "true") {
+    return mockEmailService;
+  } else {
+    return new Resend(process.env.RESEND_API_KEY);
+  }
+};
+
+const emailService = createEmailService();
 
 export const stripeWebhookHandler = async (
   req: express.Request,
@@ -82,14 +103,14 @@ export const stripeWebhookHandler = async (
 
     // send receipt
     try {
-      const data = await resend.emails.send({
+      const data = await emailService.emails.send({
         from: "DigitalHippo <hello@joshtriedcoding.com>",
         to: [user.email as string],
         subject: "Thanks for your order! This is your receipt.",
         html: await ReceiptEmailHtml({
           date: new Date(),
           email: user.email as string,
-          orderId: String(session.metadata.orderId),
+          orderId: session.metadata.orderId,
           products: order.products as Product[],
         }),
       });
