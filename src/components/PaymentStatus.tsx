@@ -17,7 +17,8 @@ const PaymentStatus = ({ orderEmail, orderId, isPaid }: PaymentStatusProps) => {
     { orderId },
     {
       enabled: isPaid === false,
-      refetchInterval: (query) => (query.state.data?.isPaid ? false : 1000),
+      // @ts-ignore
+      refetchInterval: (query) => (query.data?.isPaid ? false : 1000),
       queryKey: ["payment.pollOrderStatus", { orderId }],
     }
   );
