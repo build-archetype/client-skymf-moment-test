@@ -1,15 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "digitalhippo-production.up.railway.app",
-      },
-    ],
+    domains: ["your-image-domain.com"],
   },
-  experimental: {
-    esmExternals: "loose",
+  async rewrites() {
+    return [
+      {
+        source: "/admin/:path*",
+        destination: "/api/[...payload]",
+      },
+    ];
   },
 };
 

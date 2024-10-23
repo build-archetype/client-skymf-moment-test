@@ -27,3 +27,16 @@ export async function closeMongoDB() {
     await mongoServer.stop();
   }
 }
+
+let cachedClient: MongoClient | null = null;
+
+export async function connectToDatabase() {
+  if (cachedClient) {
+    return cachedClient;
+  }
+
+  const client = await MongoClient.connect(process.env.MONGODB_URL!);
+
+  cachedClient = client;
+  return client;
+}

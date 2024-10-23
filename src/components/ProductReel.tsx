@@ -2,7 +2,7 @@
 
 import { TQueryValidator } from "@/lib/validators/query-validator";
 import { Product } from "@/payload-types";
-import { trpc } from "@/trpc/client";
+import { trpc } from "@/utils/trpc";
 import Link from "next/link";
 import ProductListing from "./ProductListing";
 
