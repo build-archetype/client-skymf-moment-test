@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
 import path from "path";
 import { setupMongoDB } from "./config/mongoSetup";
-import { InitOptions } from "payload/config";
+import { inferAsyncReturnType } from "@trpc/server";
+import { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 
 // Load environment variables
 dotenv.config({
@@ -9,63 +10,42 @@ dotenv.config({
 });
 
 import express from "express";
+import bodyParser from "body-parser";
 import { getPayloadClient } from "./get-payload";
 import { nextApp, nextHandler } from "./next-utils";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { appRouter } from "./trpc";
-import { inferAsyncReturnType } from "@trpc/server";
-import bodyParser from "body-parser";
-import { IncomingMessage } from "http";
-import { stripeWebhookHandler } from "./webhooks";
-import nextBuild from "next/dist/build";
 import { PayloadRequest } from "payload/types";
-import { parse } from "url";
+import stripeWebhookHandler from "./webhooks";
 
-dotenv.config();
+// ... existing code ...
 
-const app = express();
-const PORT = Number(process.env.PORT) || 3000;
-
-const createContext = ({
+export const createContext = async ({
   req,
   res,
-}: trpcExpress.CreateExpressContextOptions) => ({
-  req,
-  res,
-});
-
-export type ExpressContext = inferAsyncReturnType<typeof createContext>;
-
-export type WebhookRequest = IncomingMessage & {
-  rawBody: Buffer;
+}: CreateExpressContextOptions) => {
+  return { req, res, user: req.user };
 };
 
-const start = async () => {
+export type Context = inferAsyncReturnType<typeof createContext>;
+
+// Remove the start function and create an async function to initialize the app
+const initializeApp = async () => {
   // Setup MongoDB (either in-memory or real)
   await setupMongoDB();
 
-  const webhookMiddleware = bodyParser.json({
-    verify: (req: WebhookRequest, _, buffer) => {
-      req.rawBody = buffer;
-    },
+  const app = express();
+
+  // Add this middleware to parse the raw body for the webhook route
+  app.use("/api/webhooks/stripe", bodyParser.raw({ type: "application/json" }));
+
+  app.post("/api/webhooks/stripe", (req, res) => {
+    // @ts-ignore
+    req.rawBody = req.body;
+    return stripeWebhookHandler(req, res);
   });
 
-  app.post("/api/webhooks/stripe", webhookMiddleware, stripeWebhookHandler);
-
   const payload = await getPayloadClient();
-
-  if (process.env.NEXT_BUILD) {
-    app.listen(PORT, async () => {
-      payload.logger.info("Next.js is building for production");
-
-      // @ts-expect-error
-      await nextBuild(path.join(__dirname, "../"));
-
-      process.exit();
-    });
-
-    return;
-  }
 
   const cartRouter = express.Router();
 
@@ -93,15 +73,21 @@ const start = async () => {
 
   app.use((req, res) => nextHandler(req, res));
 
-  nextApp.prepare().then(() => {
-    payload.logger.info("Next.js started");
-
-    app.listen(PORT, async () => {
-      payload.logger.info(
-        `Next.js App URL: ${process.env.NEXT_PUBLIC_SERVER_URL}`
-      );
-    });
-  });
+  return app;
 };
 
-start();
+// Export a handler function for Vercel
+export default async (req: any, res: any) => {
+  const app = await initializeApp();
+  app(req, res);
+};
+
+// If running locally, start the server
+if (process.env.NODE_ENV !== "production") {
+  const PORT = Number(process.env.PORT) || 3000;
+  initializeApp().then((app) => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  });
+}
